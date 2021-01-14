@@ -1,5 +1,6 @@
 package com.example.retrofitutil;
 
+import android.util.Log;
 import com.example.retrofitutil.constant.Constant;
 import okhttp3.HttpUrl;
 import okhttp3.Interceptor;
@@ -27,6 +28,7 @@ public class BaseUrlInterceptor implements Interceptor {
         Request.Builder builder = request.newBuilder()
                 .header("terminalId", Constant.ADDRESS)
                 .header("terminalSerialNumber", Constant.SERIAL_NUMBER);
+        Log.e("TAG", "intercept: " + request);
         List<String> list = request.headers("url_name");
         if (list != null && !list.isEmpty()) {
             builder.removeHeader("url_name");
@@ -42,8 +44,11 @@ public class BaseUrlInterceptor implements Interceptor {
                     .host(newUrl.host())
                     .port(newUrl.port())
                     .build();
+            Log.e("TAG", "intercept1: " + request.url());
             return chain.proceed(builder.url(newFullUrl).build());
         }
+        Log.e("TAG", "intercept: " + request.url());
         return chain.proceed(request);
     }
+
 }

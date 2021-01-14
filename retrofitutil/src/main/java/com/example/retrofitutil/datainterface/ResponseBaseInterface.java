@@ -1,15 +1,16 @@
 package com.example.retrofitutil.datainterface;
 
 import com.example.retrofitutil.MacAddressUtils;
+import com.example.retrofitutil.ResponseBean;
 import com.example.retrofitutil.constant.Constant;
 import retrofit2.Call;
 import retrofit2.http.*;
 
 public interface ResponseBaseInterface {
     @GET
-    Call<DataBean> get(@Url String url,boolean changeThread);
+    Call<ResponseBean> get(@Url String url);
 
     @POST
-    Call<DataBean> post(@Url String url,boolean changeThread);
+    Call<ResponseBean> post(@Url String url,@Body Body body);
 
 }

@@ -19,22 +19,22 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(BASE_URL)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-        MyApiEndpointInterface apiServer = retrofit.create(MyApiEndpointInterface.class);
-        Call<RetrofitEntity> call =  apiServer.getAllVideo(true);
-        call.enqueue(new Callback<RetrofitEntity>() {
-            @Override
-            public void onResponse(Call<RetrofitEntity> call, Response<RetrofitEntity> response) {
-                Log.e(TAG, "onResponse: " + response.body());
-            }
+        RetrofitUtil.getInstance().get("dsapi/",true);
 
+        new Thread(){
             @Override
-            public void onFailure(Call<RetrofitEntity> call, Throwable t) {
-
+            public void run() {
+                RetrofitUtil.getInstance().get("dsapi/");
             }
-        });
+        }.start();
+        new Thread(){
+            @Override
+            public void run() {
+                RetrofitUtil.getInstance().get("dsapi/");
+            }
+        }.start();
+        RetrofitUtil.getInstance().get("dsapi/",true);
     }
+
+
 }
