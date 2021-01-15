@@ -1,4 +1,4 @@
-package com.example.retrofitutil;
+package com.example.retrofitutil.uitl;
 
 import android.Manifest;
 import android.content.Context;
@@ -23,6 +23,7 @@ import androidx.core.app.ActivityCompat;
 
 /**
  * Created by Ray.lee on 2019/3/19.
+ * 可有可无的类，仅为了获取部分参数
  */
 public class MacAddressUtils {
 

@@ -2,7 +2,8 @@ package com.example.retrofitdemo;
 
 
 import android.util.Log;
-import com.example.retrofitutil.ResponseBean;
+import com.example.retrofitutil.datainterface.ResponseBean;
+import org.json.JSONObject;
 
 public class Translation implements ResponseBean {
     private int sid;
@@ -31,5 +32,11 @@ public class Translation implements ResponseBean {
         Log.e("TAG", "Rxjava翻译结果：" + note);
         Log.e("TAG", "Rxjava翻译结果：" + love);
         Log.e("TAG", "Rxjava翻译结果：" + translation);
+    }
+
+    @Override
+    public JSONObject getValue() {
+        show();
+        return null;
     }
 }

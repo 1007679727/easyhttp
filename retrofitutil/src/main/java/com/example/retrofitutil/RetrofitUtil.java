@@ -2,8 +2,9 @@ package com.example.retrofitutil;
 
 import android.util.Log;
 import androidx.annotation.NonNull;
-import com.example.retrofitutil.constant.Constant;
 import com.example.retrofitutil.datainterface.ResponseBaseInterface;
+import com.example.retrofitutil.datainterface.ResponseBean;
+import com.example.retrofitutil.uitl.Constant;
 import okhttp3.*;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -22,11 +23,14 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class RetrofitUtil {
 
     private static RetrofitUtil retrofitUtil = new RetrofitUtil();
+    private static ConcurrentHashMap<String, List<Cookie>> cookieStore = new ConcurrentHashMap();
+    private BaseUrlInterceptor baseUrlInterceptor = new BaseUrlInterceptor();
     private Retrofit retrofit;
 
     private RetrofitUtil() {
@@ -39,12 +43,12 @@ public class RetrofitUtil {
                 .cookieJar(new CookieJar() {
                     @Override
                     public void saveFromResponse(HttpUrl url, List<Cookie> cookies) {
-                        Constant.cookieStore.put(url.host(), cookies);
+                        cookieStore.put(url.host(), cookies);
                     }
 
                     @Override
                     public List<Cookie> loadForRequest(HttpUrl url) {
-                        List<Cookie> cookies = Constant.cookieStore.get(url.host());
+                        List<Cookie> cookies = cookieStore.get(url.host());
                         if (cookies != null) {
                             return cookies;
                         }
@@ -52,7 +56,8 @@ public class RetrofitUtil {
                     }
                 })
                 .sslSocketFactory(createSSLSocketFactory(), new TrustAllCerts())
-                .addInterceptor(new BaseUrlInterceptor())
+                .addInterceptor(baseUrlInterceptor)
+//                .addInterceptor(new BaseResposeBeanInterceptor())
                 .build();
 
         retrofit = new Retrofit.Builder()
@@ -85,19 +90,67 @@ public class RetrofitUtil {
      * }
      * });
      */
+    public <T> ResponseBean get(T t) {
+        try {
+            return get(Bean2ParmaUtil.postUrl(t));
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
     public ResponseBean get(String url) {
         return get(url, null);
+    }
+
+    public ResponseBean get(String url, boolean changeThread) {
+        return get(url, null, changeThread);
     }
 
     public ResponseBean get(String url, Object tag) {
         return get(url, tag, false);
     }
 
-
     public ResponseBean get(@NonNull String url, Object tag, @NonNull boolean changeThread) {
+        if (tag != null) {
+            baseUrlInterceptor.addTmpRequest2Map(url, tag);
+        }
         ResponseBaseInterface responseBaseInterface = retrofit.create(ResponseBaseInterface.class);
         Call<ResponseBean> call = responseBaseInterface.get(url);
+        return sendRequest(call, changeThread);
+    }
+
+    public ResponseBean get(RequestEntity requestEntity) {
+        return get(requestEntity.getUrl(), requestEntity.getTags(), requestEntity.isChangeThread());
+    }
+
+
+//    public ResponseBean post(String url){
+//        return post(url,RequestBody.create(MediaType.get()),null,false);
+//    }
+    public <T> ResponseBean post(T t) {
+        try {
+            return post(Bean2ParmaUtil.postUrl(t));
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public ResponseBean post(RequestEntity requestEntity) {
+        return post(requestEntity.getUrl(), requestEntity.getBody(), requestEntity.getTags(),requestEntity.isChangeThread());
+    }
+
+    public <T> ResponseBean post(@NonNull String url, RequestBody body,Object tag, @NonNull boolean changeThread) {
+        if (tag != null) {
+            baseUrlInterceptor.addTmpRequest2Map(url, tag);
+        }
+        ResponseBaseInterface responseBaseInterface = retrofit.create(ResponseBaseInterface.class);
+        Call<ResponseBean> call = responseBaseInterface.post(url, body);
+        return sendRequest(call, changeThread);
+    }
+
+    private ResponseBean sendRequest(Call call, boolean changeThread) {
         if (changeThread) {
             call.enqueue(new Callback<ResponseBean>() {
                 @Override
@@ -112,8 +165,8 @@ public class RetrofitUtil {
             });
         } else {
             try {
-                Response<ResponseBean> s = call.execute();
-                return s.body();
+                Response<ResponseBean> response = call.execute();
+                return response.body();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -121,16 +174,10 @@ public class RetrofitUtil {
         return null;
     }
 
-    public <T> ResponseBean post(@NonNull String url, T t, @NonNull boolean changeThread){
+    public <T> void upload(T t) {
 
-        return null;
-    }
-
-    public <T> void upload(T t, ResponseListener listener) {
-        MultipartBody.Builder builder = new MultipartBody.Builder();
-        builder.setType(MultipartBody.FORM);
         try {
-            Bean2ParmaUtil.getUrl(t);
+            post(Bean2ParmaUtil.postUrl(t));
         } catch (IllegalAccessException e) {
             e.printStackTrace();
         }
@@ -149,6 +196,10 @@ public class RetrofitUtil {
         }
 
         return ssfFactory;
+    }
+
+    public <T> void create(T t,T t2) {
+
     }
 
     private static class TrustAllCerts implements X509TrustManager {
