@@ -27,15 +27,22 @@ public class Bean2ParmaUtil {
         MultipartBody.Builder multipartBody = new MultipartBody.Builder();
         multipartBody.setType(MultipartBody.FORM);
         RequestEntity.Builder builder = new RequestEntity.Builder();
+        boolean hasFile = false;
         for (Field field : fields) {
             field.setAccessible(true);
-            Object obj = field.get(t.getClass());
+            Object obj = field.get(t);
             if (obj != null) {
                 if (obj instanceof File) {
                     multipartBody.addFormDataPart("file", ((File) obj).getName(), RequestBody.create(MediaType.parse(guessMimeType(((File) obj).getName())), (File) obj));
+                    hasFile = true;
                 } else {
                     if ("tags".equals(field.getName())){
                         builder.setTags(obj);
+                        continue;
+                    }
+                    if ("url".equals(field.getName())){
+                        urlBuilder.append(obj);
+                        continue;
                     }
                     urlBuilder.append("&")
                             .append(field.getName())
@@ -44,8 +51,10 @@ public class Bean2ParmaUtil {
                 }
             }
         }
-        builder.setUrl(urlBuilder.toString())
-                .setBody(multipartBody.build());
+        builder.setUrl(urlBuilder.toString());
+        if (hasFile) {
+            builder.setBody(multipartBody.build());
+        }
         return builder.builder();
     }
 

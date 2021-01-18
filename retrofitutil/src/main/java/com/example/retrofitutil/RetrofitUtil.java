@@ -99,6 +99,11 @@ public class RetrofitUtil {
         return get(Bean2ParmaUtil.postUrl(t), requestInterface);
     }
 
+    public <T> ResponseBean get(T t, Class<?> requestInterface, Callback callback) throws Exception {
+        RequestEntity url = Bean2ParmaUtil.postUrl(t);
+        return get(Bean2ParmaUtil.postUrl(t), requestInterface, callback);
+    }
+
     /**
      * 处理实体类的get请求
      *

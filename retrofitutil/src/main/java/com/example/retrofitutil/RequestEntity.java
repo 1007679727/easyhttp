@@ -6,12 +6,10 @@ public class RequestEntity {
     private String url;
     private Object tags;
     private RequestBody body;
-    private boolean changeThread;
 
-    public RequestEntity(String url, RequestBody body, Object tags, boolean changeThread) {
+    public RequestEntity(String url, RequestBody body, Object tags) {
         this.url = url;
         this.body = body;
-        this.changeThread = changeThread;
         this.tags = tags;
     }
 
@@ -21,10 +19,6 @@ public class RequestEntity {
 
     public RequestBody getBody() {
         return body;
-    }
-
-    public boolean isChangeThread() {
-        return changeThread;
     }
 
     public Object getTags() {
@@ -38,7 +32,6 @@ public class RequestEntity {
         private String url;
         private Object tags;
         private RequestBody body;
-        private boolean changeThread;
 
         public Builder setUrl(String url) {
             this.url = url;
@@ -50,17 +43,13 @@ public class RequestEntity {
             return this;
         }
 
-        public Builder setChangeThread(boolean changeThread) {
-            this.changeThread = changeThread;
+        public Builder setTags(Object tags) {
+            this.tags = tags;
             return this;
         }
 
-        public void setTags(Object tags) {
-            this.tags = tags;
-        }
-
         public RequestEntity builder() {
-            return new RequestEntity(url, body, tags, changeThread);
+            return new RequestEntity(url, body, tags);
         }
     }
 }

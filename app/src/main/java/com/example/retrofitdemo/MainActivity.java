@@ -1,22 +1,13 @@
 package com.example.retrofitdemo;
 
-import android.util.Log;
-import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
+import androidx.appcompat.app.AppCompatActivity;
 import com.example.retrofitutil.RetrofitUtil;
 import com.example.retrofitutil.datainterface.ResponseBean;
-import com.google.gson.GsonBuilder;
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.ConnectionPool;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import retrofit2.*;
-import retrofit2.converter.gson.GsonConverterFactory;
+import okhttp3.*;
+import retrofit2.Retrofit;
 
 import java.io.IOException;
-import java.util.Observable;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -29,23 +20,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-//        sendGet();
         sendGet("dsapi/");
-//        RetrofitUtil.getInstance().get("dsapi/",true);
-//
-////        new Thread(){
-////            @Override
-////            public void run() {
-////                RetrofitUtil.getInstance().post("dsapi/");
-////            }
-////        }.start();
-//        new Thread(){
-//            @Override
-//            public void run() {
-//                RetrofitUtil.getInstance().get("dsapi/");
-//            }
-//        }.start();
-//        RetrofitUtil.getInstance().get("dsapi/",true);
+
     }
 
     private void sendGet(){
@@ -67,12 +43,17 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     *
+     * @param url
+     */
     private void sendGet(String url){
         new Thread(){
             @Override
             public void run() {
                 try {
-                    ResponseBean responseBean = RetrofitUtil.getInstance().get(url, MyRequest.class, new retrofit2.Callback() {
+                    RequestBean requestBean = new RequestBean();
+                    ResponseBean responseBean = RetrofitUtil.getInstance().get(requestBean, MyRequest.class, new retrofit2.Callback() {
                         @Override
                         public void onResponse(retrofit2.Call call, retrofit2.Response response) {
                             ResponseBean responseBean1 = (ResponseBean) response.body();
