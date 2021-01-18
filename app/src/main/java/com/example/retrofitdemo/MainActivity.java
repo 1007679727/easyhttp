@@ -4,6 +4,7 @@ import android.util.Log;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import com.example.retrofitutil.RetrofitUtil;
+import com.example.retrofitutil.datainterface.ResponseBean;
 import com.google.gson.GsonBuilder;
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -28,6 +29,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+//        sendGet();
+        sendGet("dsapi/");
 //        RetrofitUtil.getInstance().get("dsapi/",true);
 //
 ////        new Thread(){
@@ -47,9 +50,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void sendGet(){
         Retrofit.Builder builder = new Retrofit.Builder();
-        Retrofit retrofit = builder.build();
+        Retrofit retrofit = builder.baseUrl(BASE_URL).build();
         MyRequest c = retrofit.create(MyRequest.class);
-        Observable d = c.get(BASE_URL + "dsapi/");
         OkHttpClient okHttpClient = new OkHttpClient();
         Call call = okHttpClient.newCall(new Request.Builder().url("http://www.izaodao.com/Api/").build());
         call.enqueue(new Callback() {
@@ -63,6 +65,31 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+    }
+
+    private void sendGet(String url){
+        new Thread(){
+            @Override
+            public void run() {
+                try {
+                    ResponseBean responseBean = RetrofitUtil.getInstance().get(url, MyRequest.class, new retrofit2.Callback() {
+                        @Override
+                        public void onResponse(retrofit2.Call call, retrofit2.Response response) {
+                            ResponseBean responseBean1 = (ResponseBean) response.body();
+                            responseBean1.getValue();
+                        }
+
+                        @Override
+                        public void onFailure(retrofit2.Call call, Throwable t) {
+
+                        }
+                    });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }.start();
+
     }
 
 }

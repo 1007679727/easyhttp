@@ -34,10 +34,6 @@ public class Bean2ParmaUtil {
                 if (obj instanceof File) {
                     multipartBody.addFormDataPart("file", ((File) obj).getName(), RequestBody.create(MediaType.parse(guessMimeType(((File) obj).getName())), (File) obj));
                 } else {
-                    if ("changeThread".equals(field.getName())) {
-                        builder.setChangeThread((Boolean) obj);
-                        continue;
-                    }
                     if ("tags".equals(field.getName())){
                         builder.setTags(obj);
                     }
