@@ -100,7 +100,6 @@ public class RetrofitUtil {
     }
 
     public <T> ResponseBean get(T t, Class<?> requestInterface, Callback callback) throws Exception {
-        RequestEntity url = Bean2ParmaUtil.postUrl(t);
         return get(Bean2ParmaUtil.postUrl(t), requestInterface, callback);
     }
 
@@ -272,7 +271,6 @@ public class RetrofitUtil {
         } else {
             try {
                 Response<ResponseBean> response = call.execute();
-                response.body().getValue();
                 return response.body();
             } catch (IOException e) {
                 e.printStackTrace();
