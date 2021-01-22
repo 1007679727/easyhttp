@@ -1,16 +1,21 @@
 package com.example.retrofitutil;
 
+import okhttp3.Headers;
 import okhttp3.RequestBody;
+
+import java.util.ArrayList;
 
 public class RequestEntity {
     private String url;
     private Object tags;
     private RequestBody body;
+    private Headers headers;
 
-    public RequestEntity(String url, RequestBody body, Object tags) {
+    public RequestEntity(String url, RequestBody body, Object tags,Headers headers) {
         this.url = url;
         this.body = body;
         this.tags = tags;
+        this.headers = headers;
     }
 
     public String getUrl() {
@@ -19,6 +24,10 @@ public class RequestEntity {
 
     public RequestBody getBody() {
         return body;
+    }
+
+    public Headers getHeaders() {
+        return headers;
     }
 
     public Object getTags() {
@@ -32,6 +41,7 @@ public class RequestEntity {
         private String url;
         private Object tags;
         private RequestBody body;
+        private Headers.Builder headers;
 
         public Builder setUrl(String url) {
             this.url = url;
@@ -49,7 +59,14 @@ public class RequestEntity {
         }
 
         public RequestEntity builder() {
-            return new RequestEntity(url, body, tags);
+            if (headers == null){
+                return new RequestEntity(url, body, tags,null);
+            }
+            return new RequestEntity(url, body, tags,headers.build());
+        }
+
+        public void addHeader(String key, String val) {
+            headers.add(key,val);
         }
     }
 }

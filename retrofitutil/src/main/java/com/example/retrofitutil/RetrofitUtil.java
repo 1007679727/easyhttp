@@ -96,7 +96,7 @@ public class RetrofitUtil {
      * @return
      */
     public <T> ResponseBean get(T t, Class<?> requestInterface) throws Exception {
-        return get(Bean2ParmaUtil.postUrl(t), requestInterface);
+        return get(Bean2ParmaUtil.postUrl(t), requestInterface,null);
     }
 
     public <T> ResponseBean get(T t, Class<?> requestInterface, Callback callback) throws Exception {
@@ -112,7 +112,7 @@ public class RetrofitUtil {
      * @throws Exception
      */
     public ResponseBean get(RequestEntity requestEntity, Class<?> requestInterface, Callback callback) throws Exception {
-        return get(requestEntity.getUrl(), requestEntity.getTags(), requestInterface, callback);
+        return get(requestEntity.getUrl(), requestEntity.getTags(),requestEntity.getHeaders(), requestInterface, callback);
     }
 
     /**
@@ -127,20 +127,9 @@ public class RetrofitUtil {
     }
 
     public ResponseBean get(String url, Callback callback) throws Exception {
-        return get(url, null, callback);
+        return get(url, null,null, null,callback);
     }
 
-    /**
-     * 带有指定类型的get请求
-     *
-     * @param url
-     * @param requestInterface
-     * @return
-     * @throws Exception
-     */
-    public ResponseBean get(String url, Class<?> requestInterface, Callback callback) throws Exception {
-        return get(url, null, requestInterface, callback);
-    }
 
     /**
      * get请求实际封装位置
@@ -151,9 +140,12 @@ public class RetrofitUtil {
      * @param requestInterface retrofit封装的方法
      * @return
      */
-    public ResponseBean get(@NonNull String url, Object tag, Class<?> requestInterface, Callback callback) throws Exception {
+    public ResponseBean get(@NonNull String url, Object tag, Headers headers,Class<?> requestInterface, Callback callback) throws Exception {
         if (tag != null) {
             baseUrlInterceptor.addTmpRequest2Map(url, tag);
+        }
+        if (headers != null){
+            baseUrlInterceptor.addHeaders(url,headers);
         }
         Call call = null;
         if (requestInterface == null) {
@@ -166,6 +158,7 @@ public class RetrofitUtil {
                     try {
                         call = (Call) declaredMethod.invoke(response, url);
                     } catch (Exception e) {
+                        e.printStackTrace();
                         throw new Exception("don't create retrofit call! please check your interface has get method?");
                     }
             }
@@ -185,12 +178,20 @@ public class RetrofitUtil {
         return post(t, null);
     }
 
+    /**
+     * 切换线程的post请求
+     * @param t
+     * @param callback
+     * @param <T>
+     * @return
+     * @throws Exception
+     */
     public <T> ResponseBean post(@NonNull T t, Callback callback) throws Exception {
         return post(Bean2ParmaUtil.postUrl(t), callback);
     }
 
     public ResponseBean post(@NonNull RequestEntity requestEntity, Callback callback) throws Exception {
-        return post(requestEntity.getUrl(), requestEntity.getBody(), requestEntity.getTags(), callback, null);
+        return post(requestEntity.getUrl(), requestEntity.getBody(), requestEntity.getTags(),requestEntity.getHeaders(), callback, null);
     }
 
     public ResponseBean post(@NonNull String url, RequestBody body) throws Exception {
@@ -198,11 +199,11 @@ public class RetrofitUtil {
     }
 
     public ResponseBean post(@NonNull String url, RequestBody body, Object tag) throws Exception {
-        return post(url, body, null, null);
+        return post(url, body, tag, null,null);
     }
 
-    public ResponseBean post(@NonNull String url, RequestBody body, Object tag, Callback callback) throws Exception {
-        return post(url, body, tag, callback, null);
+    public ResponseBean post(@NonNull String url, RequestBody body, Object tag,Headers headers, Callback callback) throws Exception {
+        return post(url, body, tag, headers, callback, null);
     }
 
     /**
@@ -216,7 +217,7 @@ public class RetrofitUtil {
      * @return
      * @throws Exception
      */
-    public ResponseBean post(@NonNull String url, RequestBody body, Object tag, Callback callback, Class<?> requestInterface) throws Exception {
+    public ResponseBean post(@NonNull String url, RequestBody body, Object tag,Headers headers, Callback callback, Class<?> requestInterface) throws Exception {
         if (tag != null) {
             baseUrlInterceptor.addTmpRequest2Map(url, tag);
         }

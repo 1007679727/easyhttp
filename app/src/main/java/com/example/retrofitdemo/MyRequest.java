@@ -2,10 +2,7 @@ package com.example.retrofitdemo;
 
 import okhttp3.RequestBody;
 import retrofit2.Call;
-import retrofit2.http.Body;
-import retrofit2.http.GET;
-import retrofit2.http.POST;
-import retrofit2.http.Url;
+import retrofit2.http.*;
 
 
 public interface MyRequest  {

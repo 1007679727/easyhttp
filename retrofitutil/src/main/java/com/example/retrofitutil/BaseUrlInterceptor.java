@@ -12,7 +12,8 @@ import java.util.HashMap;
 public class BaseUrlInterceptor implements Interceptor {
 
     // 保存tags的map
-    private HashMap<String, Object> tmpRequestMap = new HashMap<>();
+    private HashMap<String, Object> tmpTagRequestMap = new HashMap<>();
+    private HashMap<String, Headers> tmpHeadersRequestMap = new HashMap<>();
 
     /**
      * 作用1：统一增加请求头 terminalId 和 terminalSerialNumber
@@ -29,14 +30,22 @@ public class BaseUrlInterceptor implements Interceptor {
     }
 
     private Request.Builder executeHeaders(Request request) {
-
-        return request.newBuilder()
-                .header("terminalId", Constant.ADDRESS)
-                .header("terminalSerialNumber", Constant.SERIAL_NUMBER)
-                .tag(tmpRequestMap.remove(request.url().url()));
+        Request.Builder r = request.newBuilder();
+        r.header("terminalId", Constant.ADDRESS).header("terminalSerialNumber", Constant.SERIAL_NUMBER);
+        if (tmpHeadersRequestMap.containsKey(request.url())) {
+            r.headers(tmpHeadersRequestMap.remove(request.url()));
+        }
+        if (tmpTagRequestMap.containsKey(request.url())){
+            r.tag(tmpTagRequestMap.remove(request.url()));
+        }
+        return r;
     }
 
     public void addTmpRequest2Map(String url, Object tag) {
-        tmpRequestMap.put(url, tag);
+        tmpTagRequestMap.put(url, tag);
+    }
+
+    public void addHeaders(String url, Headers headers) {
+        tmpHeadersRequestMap.put(url,headers);
     }
 }

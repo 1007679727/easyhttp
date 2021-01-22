@@ -5,9 +5,9 @@ import android.util.Log;
 import com.example.retrofitutil.datainterface.ResponseBean;
 import org.json.JSONObject;
 
-public class Translation implements ResponseBean {
-    private int sid;
-    private String tts;
+public class Translation extends ResponseBean {
+    private int code;
+    private String message;
     private String content;
     private String note;
     private int love;
@@ -18,7 +18,7 @@ public class Translation implements ResponseBean {
     private String dataline;
     private int s_pv;
     private int SP_pv;
-    private String[] tags;
+    private String[] data;
     private String fenxiang_img;
 
 
@@ -26,12 +26,12 @@ public class Translation implements ResponseBean {
 
     //定义 输出返回数据 的方法
     public void show() {
-        Log.e("TAG", "Rxjava翻译结果：" + sid);
-        Log.e("TAG", "Rxjava翻译结果：" + tts);
-        Log.e("TAG", "Rxjava翻译结果：" + content);
-        Log.e("TAG", "Rxjava翻译结果：" + note);
-        Log.e("TAG", "Rxjava翻译结果：" + love);
-        Log.e("TAG", "Rxjava翻译结果：" + translation);
+        Log.e("MainActivity", "Rxjava翻译结果：" + code);
+        Log.e("MainActivity", "Rxjava翻译结果：" + message);
+        Log.e("MainActivity", "Rxjava翻译结果：" + data);
+        Log.e("MainActivity", "Rxjava翻译结果：" + note);
+        Log.e("MainActivity", "Rxjava翻译结果：" + love);
+        Log.e("MainActivity", "Rxjava翻译结果：" + translation);
     }
 
     @Override

@@ -6,9 +6,9 @@ import retrofit2.http.*;
 
 public interface RequestBaseInterface {
     @GET
-    Call get(@Url String url);
+    Call<ResponseBean> get(@Url String url);
 
     @POST
-    Call post(@Url String url,@Body RequestBody body);
+    Call<ResponseBean> post(@Url String url,@Body RequestBody body);
 
 }
