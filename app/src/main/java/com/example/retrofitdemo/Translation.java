@@ -6,8 +6,8 @@ import com.example.retrofitutil.datainterface.ResponseBean;
 import org.json.JSONObject;
 
 public class Translation extends ResponseBean {
-    private int code;
-    private String message;
+//    private int code;
+//    private String message;
     private String content;
     private String note;
     private int love;
@@ -26,8 +26,8 @@ public class Translation extends ResponseBean {
 
     //定义 输出返回数据 的方法
     public void show() {
-        Log.e("MainActivity", "Rxjava翻译结果：" + code);
-        Log.e("MainActivity", "Rxjava翻译结果：" + message);
+        Log.e("MainActivity", "Rxjava翻译结果：" + content);
+        Log.e("MainActivity", "Rxjava翻译结果：" + dataline);
         Log.e("MainActivity", "Rxjava翻译结果：" + data);
         Log.e("MainActivity", "Rxjava翻译结果：" + note);
         Log.e("MainActivity", "Rxjava翻译结果：" + love);

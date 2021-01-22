@@ -70,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 try {
                     RequestBean requestBean = new RequestBean();
-                    ResponseBean responseBean = RetrofitUtil.getInstance().get(requestBean, MyRequest.class);
+                    ResponseBean responseBean = RetrofitUtil.getInstance().get(requestBean);
                     Log.e(TAG, "run: "+responseBean );
                 } catch (Exception e) {
                     e.printStackTrace();
