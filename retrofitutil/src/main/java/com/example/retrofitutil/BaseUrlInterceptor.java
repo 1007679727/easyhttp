@@ -1,6 +1,5 @@
 package com.example.retrofitutil;
 
-import com.example.retrofitutil.uitl.Constant;
 import okhttp3.*;
 
 import java.io.IOException;
@@ -8,6 +7,7 @@ import java.util.HashMap;
 
 /**
  * 基础的tag拦截器，提供修改tag，增加tag的功能
+ * 如需拓展可继承此类
  */
 public class BaseUrlInterceptor implements Interceptor {
 
@@ -29,9 +29,13 @@ public class BaseUrlInterceptor implements Interceptor {
         return chain.proceed(requestBuilder.build());
     }
 
+    /**
+     * 重构请求体，添加header和tag等
+     * @param request 原请求体
+     * @return
+     */
     private Request.Builder executeHeaders(Request request) {
         Request.Builder r = request.newBuilder();
-        r.header("terminalId", Constant.ADDRESS).header("terminalSerialNumber", Constant.SERIAL_NUMBER);
         if (tmpHeadersRequestMap.containsKey(request.url())) {
             r.headers(tmpHeadersRequestMap.remove(request.url()));
         }
@@ -41,10 +45,20 @@ public class BaseUrlInterceptor implements Interceptor {
         return r;
     }
 
+    /**
+     * 为请求添加tag
+     * @param url 分辨请求的标记
+     * @param tag 具体tag内容
+     */
     public void addTmpRequest2Map(String url, Object tag) {
         tmpTagRequestMap.put(url, tag);
     }
 
+    /**
+     * 为请求添加header
+     * @param url 分辨请求的标记
+     * @param headers 具体的header内容
+     */
     public void addHeaders(String url, Headers headers) {
         tmpHeadersRequestMap.put(url,headers);
     }
