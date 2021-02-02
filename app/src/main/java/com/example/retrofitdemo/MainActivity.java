@@ -2,82 +2,86 @@ package com.example.retrofitdemo;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import androidx.appcompat.app.AppCompatActivity;
+import com.example.retrofitdemo.res.GetLogisticsListRes;
 import com.example.retrofitutil.RetrofitUtil;
 import com.example.retrofitutil.datainterface.ResponseBean;
+import com.example.retrofitutil.exception.CreateCallFailException;
+import com.example.retrofitutil.exception.NullBaseURLException;
+import com.google.gson.Gson;
 import okhttp3.*;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 import retrofit2.Retrofit;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class MainActivity extends AppCompatActivity {
 
 
     private String TAG = "MainActivity";
-    private String BASE_URL = "http://www.izaodao.com/Api/";
+    private String BASE_URL = "http://47.102.36.228:12311/";
+    Map<String, String> headers = new HashMap<>();
+    private Button get;
+    private Button post;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        sendGet("dsapi/");
+        initRetrofit();
+        init();
 
     }
 
-    private void sendGet(){
-        Retrofit.Builder builder = new Retrofit.Builder();
-        Retrofit retrofit = builder.baseUrl(BASE_URL).build();
-        MyRequest c = retrofit.create(MyRequest.class);
-        OkHttpClient okHttpClient = new OkHttpClient();
-        Call call = okHttpClient.newCall(new Request.Builder().url("http://www.izaodao.com/Api/").build());
-        call.enqueue(new Callback() {
+    /**
+     * 初始化所必须的步骤，因为需要提供baseUrl和自定义拦截器
+     */
+    private void initRetrofit() {
+        new RetrofitUtil(BASE_URL);
+    }
+
+    private void init() {
+        headers.put("AuthorizationToken", "userInfoBean.getToken()");
+        headers.put("userInfo", "new Gson().toJson(userInfo)");
+
+        get = findViewById(R.id.get);
+        post = findViewById(R.id.post);
+        get.setOnClickListener(new View.OnClickListener() {
+            // get 请求方式
+            // 参数详解：MyRequest.class 这是来自于retrofit的方法，当前仅有get和post两种类型。原理是基于动态代理去翻译注解，生成类
+            // Callback 函数执行后的回调，这里以在主线程无需手动处理。原理 请求后通过handler发回来的
             @Override
-            public void onFailure(Call call, IOException e) {
+            public void onClick(View v) {
+                String url = new StringBuilder(BASE_URL).append("public-security-duty/yjqwApp/list?page=1&rows=100").toString();//&jsonStr=").append(Gson().toJson(stupidParam))
+                try {
+                    RetrofitUtil.getInstance().get(url, "loadLogistics", headers, MyRequest.class, new Callback() {
+                        @Override
+                        public void onResponse(Call call, Response response) {
+                            Log.e(TAG, "onResponse: "+response.body() );
+                            get.setText("true");
+                            get.setVisibility(View.GONE);
+                        }
 
-            }
-
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-
+                        @Override
+                        public void onFailure(Call call, Throwable t) {
+                            get.setText("false");
+                        }
+                    });
+                } catch (CreateCallFailException e) {
+                    e.printStackTrace();
+                } catch (NullBaseURLException e) {
+                    e.printStackTrace();
+                }
             }
         });
     }
 
-    /**
-     * 案例：使用方式获取RetrofitUtil实例对象，直接请求即可
-     * @param url
-     */
-    private void sendGet(String url){
-//        try {
-//            RetrofitUtil.getInstance().get("http://47.102.36.228:12311/police-run/PSPC/DPS/getAllPoliceStationJurisdiction/320102000000",new retrofit2.Callback() {
-//                @Override
-//                public void onResponse(retrofit2.Call call, retrofit2.Response response) {
-//                    ResponseBean responseBean1 = (ResponseBean) response.body();
-//                    Log.e(TAG, "onResponse: "+response.body()+response.message() );
-//                }
-//
-//                @Override
-//                public void onFailure(retrofit2.Call call, Throwable t) {
-//                    Log.e(TAG, "onFailure: ",t );
-//                }
-//            });
-//        } catch (Exception e) {
-//            Log.e(TAG, "sendGet: ",e );
-//        }
-        new Thread(){
-            @Override
-            public void run() {
-                try {
-                    RequestBean requestBean = new RequestBean();
-                    ResponseBean responseBean = RetrofitUtil.getInstance().get(requestBean);
-                    Log.e(TAG, "run: "+responseBean );
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }.start();
-
-    }
 
 }
