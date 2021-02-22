@@ -1,20 +1,22 @@
 package com.example.retrofitutil;
 
-import android.text.TextUtils;
+import android.annotation.SuppressLint;
 import android.util.Log;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import com.example.retrofitutil.datainterface.RequestBaseInterface;
-import com.example.retrofitutil.datainterface.ResponseBean;
-import com.example.retrofitutil.exception.CreateCallFailException;
-import com.example.retrofitutil.exception.NullBaseURLException;
+import com.example.retrofitutil.api.NetCallBack;
+import com.example.retrofitutil.api.RequestBaseInterface;
+import com.example.retrofitutil.uitl.FileUtil;
+import com.example.retrofitutil.uitl.MacAddressUtils;
+import com.google.gson.Gson;
+import io.reactivex.Observable;
+import io.reactivex.Observer;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.plugins.RxJavaPlugins;
+import io.reactivex.schedulers.Schedulers;
 import okhttp3.*;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
-import retrofit2.converter.gson.GsonConverterFactory;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
@@ -22,13 +24,10 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,34 +39,23 @@ import java.util.concurrent.TimeUnit;
  */
 public class RetrofitUtil {
 
-    private static final CharSequence GET = "get";
-    private static final CharSequence POST = "post";
     private static ConcurrentHashMap<String, List<Cookie>> cookieStore = new ConcurrentHashMap();
     private static RetrofitUtil retrofitUtil;
-    private static String BASE_URL;
-    private BaseUrlInterceptor baseUrlInterceptor;
-    private Retrofit retrofit;
+    private static String BASE_URL = "http://47.102.36.228:12311/";
+    private RequestBaseInterface requestBean;
     private OkHttpClient client;
+    private Retrofit retrofit;
+    private Gson gson;
 
-    private RetrofitUtil() {
-        BASE_URL = "127.0.0.1";
-        baseUrlInterceptor = new BaseUrlInterceptor();
+    public RetrofitUtil() {
         init();
-        retrofitUtil = this;
-    }
-
-    public RetrofitUtil(String BASE_URL){
-        this.BASE_URL = BASE_URL;
-        this.baseUrlInterceptor = new BaseUrlInterceptor();
-        init();
-        retrofitUtil = this;
-    }
-
-    public RetrofitUtil(String BASE_URL,BaseUrlInterceptor interceptor){
-        this.BASE_URL = BASE_URL;
-        this.baseUrlInterceptor = interceptor;
-        init();
-        retrofitUtil = this;
+        RxJavaPlugins.setErrorHandler(new Consumer<Throwable>() {
+            @Override
+            public void accept(Throwable throwable) throws Exception {
+                throwable.printStackTrace();
+                Log.e("TAG", "accept: "+throwable.toString() );
+            }
+        });
     }
 
     /**
@@ -75,6 +63,7 @@ public class RetrofitUtil {
      * 创建一个okHttpclient和一个Retrofit
      */
     private void init() {
+        gson = new Gson();
         client = new OkHttpClient.Builder()
                 .connectTimeout(1, TimeUnit.MINUTES)
                 .cookieJar(new CookieJar() {
@@ -93,325 +82,299 @@ public class RetrofitUtil {
                     }
                 })
                 .sslSocketFactory(createSSLSocketFactory(), new TrustAllCerts())
-                .addInterceptor(baseUrlInterceptor)
+                .addInterceptor(new Interceptor() {
+                    @Override
+                    public Response intercept(Chain chain) throws IOException {
+                        Request request = chain.request().newBuilder()
+                                .addHeader("terminalId", MacAddressUtils.getLocalInetAddress().getHostAddress())
+                                .build();
+                        return chain.proceed(request);
+                    }
+                })
                 .build();
 
         retrofit = new Retrofit.Builder()
                 .baseUrl(BASE_URL)
                 .client(client)
-                .addConverterFactory(GsonConverterFactory.create())
+//                .addConverterFactory(GsonConverterFactory.create())
                 .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
                 .build();
+
+        requestBean = retrofit.create(RequestBaseInterface.class);
     }
 
     /**
-     * 获取retrofitUtil对象
-     * @return RetrofitUtil
-     * @throws NullBaseURLException
+     * @return RetrofitUtil 实例
      */
-    public static RetrofitUtil getInstance() throws NullBaseURLException {
-        if (BASE_URL == null) {
-            throw new NullBaseURLException();
-
+    public static RetrofitUtil getInstance() {
+        if (retrofitUtil == null) {
+            retrofitUtil = new RetrofitUtil();
         }
         return retrofitUtil;
     }
 
-    public void setBaseURL(String baseUrl) {
-        this.BASE_URL = baseUrl;
-    }
-
-    public void setBaseUrlInterceptor(){
-    }
-
     /**
-     * 同步实现的 默认泛型的get请求方式
-     * @param t 泛型，java bean对象
-     * @param <T>
-     * @return
-     * @throws CreateCallFailException
-     */
-    public <T> ResponseBean get(T t) throws CreateCallFailException {
-        return get(Bean2ParmaUtil.parseUrl(t), null);
-    }
-
-    /**
-     * 同步实现的 泛型请求
-     * @param t 泛型，java bean对象
-     * @param requestInterface 请求接口，参考retrofit请求实现，必须为接口
-     * @param <T>
-     * @return
-     * @throws CreateCallFailException
-     */
-    public <T> ResponseBean get(T t, Class<?> requestInterface) throws CreateCallFailException {
-        return get(Bean2ParmaUtil.parseUrl(t), requestInterface,null);
-    }
-
-    /**
-     * 异步实现的 泛型请求，回调方法在主线程
-     * @param t 泛型，java bean对象
-     * @param requestInterface 请求接口，参考retrofit请求实现，必须为接口
-     * @param callback
-     * @param <T>
-     * @return
-     * @throws CreateCallFailException
-     */
-    public <T> ResponseBean get(T t, Class<?> requestInterface, Callback callback) throws CreateCallFailException {
-        return get(Bean2ParmaUtil.parseUrl(t), requestInterface, callback);
-    }
-
-    /**
-     * 处理实体类的get请求
-     * @param requestEntity 请求实体
-     * @param requestInterface 请求接口，参考retrofit请求实现，必须为接口
-     * @return
-     * @throws CreateCallFailException
-     */
-    public ResponseBean get(RequestEntity requestEntity, Class<?> requestInterface, Callback callback) throws CreateCallFailException {
-        return get(requestEntity.getUrl(), requestEntity.getTags(),requestEntity.getHeaders(), requestInterface, callback);
-    }
-
-    /**
-     * 同步 默认的get请求
-     * 基于url请求
-     * @param url
-     * @return
-     * @throws CreateCallFailException
-     */
-    public ResponseBean get(String url) throws CreateCallFailException {
-        return get(url, null, null);
-    }
-
-    /**
-     * 异步 默认的get请求
-     * 基于url请求，回调函数在主线程
-     * @param url
-     * @return
-     * @throws CreateCallFailException
-     */
-    public ResponseBean get(String url, Callback callback) throws CreateCallFailException {
-        return get(url, null,null, null,callback);
-    }
-
-    /**
-     * get请求实际封装位置
-     * 通过反射的方式拿到传入对象的方法
-     * @param url 非空地址
-     * @param tag tag 可为空
-     * @param headersMap headers 可为空
-     * @param requestInterface 请求接口 可为空，为空则给定默认值
-     * @param callback 回调函数、如果是异步则传入
-     * @return
-     * @throws CreateCallFailException 由于未知错误，导致创建call失败，具体原因需要具体分析
-     */
-    public ResponseBean get(@NonNull String url, Object tag, Map<String, String> headersMap,Class<?> requestInterface, Callback callback) throws CreateCallFailException {
-        dealTagAndHeader(url,tag,headersMap);
-        Call call = null;
-        if (requestInterface == null) {
-            RequestBaseInterface request = retrofit.create(RequestBaseInterface.class);
-            call = request.get(url);
-        } else {
-            Object response = retrofit.create(requestInterface);
-            for (Method declaredMethod : response.getClass().getDeclaredMethods()) {
-                if (declaredMethod.getName().contains(GET))
-                    try {
-                        call = (Call) declaredMethod.invoke(response, url);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        throw new CreateCallFailException();
-                    }
-            }
-        }
-        return sendRequest(call, callback);
-    }
-
-    private void dealTagAndHeader(String url ,Object tag, Map<String, String> headersMap) {
-        if (tag != null) {
-            baseUrlInterceptor.addTmpRequest2Map(url, tag);
-        }
-        if (headersMap != null){
-            Headers.Builder headers = new Headers.Builder();
-            Iterator it = headersMap.entrySet().iterator();
-            while (it.hasNext()) {
-                Map.Entry en = (Map.Entry) it.next();
-                String key = (String) en.getKey();
-                String val = (String) en.getValue();
-                headers.add(key, val);
-            }
-            baseUrlInterceptor.addHeaders(url,headers.build());
-        }
-    }
-
-    /**
-     * 同步的 默认的请求类型 泛型
+     * post请求，带bean参数
      *
-     * @param t
-     * @param <T>
-     * @return
-     * @throws Exception
+     * @param url      url
+     * @param param    bean类参数
+     * @param cls      返回bean类
+     * @param callBack 网络执行回调
      */
-    public <T> ResponseBean post(@NonNull T t) throws Exception {
-        return post(t, null);
+    public void post(String url, Object param, Class cls, NetCallBack callBack) {
+        post(url, gson.toJson(param), cls, callBack);
+    }
+    public void post(String url, Object param, Class cls, NetCallBack callBack,boolean toMainThread) {
+        post(url, gson.toJson(param), cls, callBack,toMainThread);
     }
 
     /**
-     * 异步的 切换线程的post请求
-     * @param t
-     * @param callback
-     * @param <T>
-     * @return
-     * @throws Exception
-     */
-    public <T> ResponseBean post(@NonNull T t, Callback callback) throws Exception {
-        return post(Bean2ParmaUtil.parseUrl(t), callback);
-    }
-
-    public ResponseBean post(@NonNull RequestEntity requestEntity, Callback callback) throws Exception {
-        return post(requestEntity.getUrl(), requestEntity.getBody(), requestEntity.getTags(),requestEntity.getHeaders(), callback, null);
-    }
-
-    public ResponseBean post(@NonNull String url, RequestBody body, Object tag,Map<String, String> headers, Callback callback) throws Exception {
-        return post(url, body, tag, headers, callback, null);
-    }
-
-    public <T> void post(@NonNull String url, @NonNull Map<String, String> params, @NonNull Object tag, final Class<T> resCls, @Nullable Callback callback) {
-        FormBody.Builder builder = new FormBody.Builder();
-        for (String key : params.keySet()) {
-            builder.add(key, params.get(key));
-        }
-        RequestBody requestBody = builder.build();
-        try {
-            post(url, requestBody, tag, null, callback, resCls);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public <T> void post(@NonNull String url, @NonNull String param, @NonNull Object tag, final Class<T> resCls, @Nullable Callback callback) {
-        RequestBody requestBody = RequestBody.create(MediaType.parse("application/json;charset=utf-8"), param);
-        try {
-            post(url,requestBody,tag,null,callback ,resCls);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public <T> void post(@NonNull String url, @NonNull String param, final Map<String, String> headers, @NonNull Object tag, final Class<T> resCls, @Nullable Callback callback) {
-        RequestBody requestBody = RequestBody.create(MediaType.parse("application/json;charset=utf-8"), param);
-        try {
-            post(url, requestBody, tag, headers, callback,resCls);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * post请求
-     * @param url              非空，post请求的url
-     * @param body             http body
-     * @param tag              http tag
-     * @param headersMap
-     * @param callback         回调函数，若同步执行不需要回调
-     * @param requestInterface 请求实现类型
-     * @return
-     * @throws Exception
-     */
-    public ResponseBean post(@NonNull String url, @NonNull RequestBody body, Object tag, Map<String, String> headersMap, Callback callback, Class<?> requestInterface) throws Exception {
-        dealTagAndHeader(url,tag,headersMap);
-        Call call = null;
-        if (requestInterface == null) {
-            RequestBaseInterface request = retrofit.create(RequestBaseInterface.class);
-            call = request.post(url, body);
-        } else {
-            Object response = retrofit.create(requestInterface);
-            for (Method declaredMethod : response.getClass().getDeclaredMethods()) {
-                if (declaredMethod.getName().contains(POST))
-                    try {
-                        call = (Call) declaredMethod.invoke(response, url, body);
-                    } catch (Exception e) {
-                        throw new Exception("don't create retrofit call! please check your interface has get method?");
-                    }
-            }
-        }
-        return sendRequest(call, callback);
-    }
-
-    /**
-     * 上传文件的功能实现，使用的方法是multipartBody
-     * 尚未实现断点续传
-     * @param t
-     * @param callback
-     * @param <T>
-     */
-    public <T> void upload(T t, @NonNull Callback callback) {
-        try {
-            post(Bean2ParmaUtil.parseUrl(t), callback);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public <T> void upload(@NonNull String url, @NonNull Map<String, String> params, @NonNull File file, @NonNull String name, @NonNull Object tag, Class<T> resCls, @NonNull Callback callback) {
-        MultipartBody.Builder builder = new MultipartBody.Builder();
-        builder.setType(MultipartBody.FORM);
-        if (params != null) {
-            for (String key : params.keySet()) {
-                if (!params.get(key).isEmpty()) {
-                    builder.addFormDataPart(key, params.get(key));
-                }
-            }
-        }
-        builder.addFormDataPart(name, file.getName(), RequestBody.create(MediaType.parse("application/octet-stream"), file));
-        RequestBody requestBody = builder.build();
-        try {
-            post(url, requestBody, tag, null, callback, resCls);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public <T> void uploadFiles(@NonNull String url, @NonNull Map<String, String> params, @NonNull List<File> files, @NonNull String name, @NonNull Object tag, Class<T> resCls, @Nullable Callback callback) {
-        MultipartBody.Builder builder = new MultipartBody.Builder();
-        builder.setType(MultipartBody.FORM);
-        if (params != null) {
-            for (String key : params.keySet()) {
-                if (!TextUtils.isEmpty(params.get(key))) {
-                    builder.addFormDataPart(key, params.get(key));
-                }
-            }
-        }
-        for (File file : files) {
-            builder.addFormDataPart(name, file.getName(), RequestBody.create(MediaType.parse(Bean2ParmaUtil.guessMimeType(file.getName())), file));
-        }
-        RequestBody requestBody = builder.build();
-        try {
-            post(url, requestBody, tag, null, callback, resCls);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * 实际请求发送的地方
-     * 同步方法返回一个Bean类，提供基础方法getValue
-     * 异步方法则传入一个回调函数
+     * post请求 带json格式数据
      *
-     * @param call
-     * @param callback
-     * @return ResponseBean
+     * @param url      url
+     * @param param    json格式数据
+     * @param cls      返回bean类
+     * @param callBack 网络执行回调
      */
-    private ResponseBean sendRequest(Call call, Callback callback) {
-        if (callback != null) {
-            call.enqueue(callback);
-        } else {
-            try {
-                Response<ResponseBean> response = call.execute();
-                return response.body();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return null;
+    public void post(String url, String param, Class cls, NetCallBack callBack) {
+        RequestBody requestBody = RequestBody.create(MediaType.parse("application/json;charset=utf-8"), param);
+        sendRequest(requestBean.postJson(url, requestBody), cls, callBack);
+    }
+
+    public void post(String url, String param, Class cls, NetCallBack callBack,boolean toMainThread) {
+        RequestBody requestBody = RequestBody.create(MediaType.parse("application/json;charset=utf-8"), param);
+        sendRequestCurrentThread(requestBean.postJson(url, requestBody), cls, callBack);
+    }
+
+
+    /**
+     * post请求 带json格式数据+token
+     *
+     * @param url      url
+     * @param param    json格式数据
+     * @param token    token
+     * @param cls      返回bean类
+     * @param callBack 网络执行回调
+     */
+    public void post(String url, String param, String token, Class cls, NetCallBack callBack) {
+        RequestBody requestBody = RequestBody.create(MediaType.parse("application/json;charset=utf-8"), param);
+        sendRequest(requestBean.postJSonToken(url, requestBody, token), cls, callBack);
+    }
+    public void post(String url, String param, String token, Class cls, NetCallBack callBack,boolean toMainThread) {
+        RequestBody requestBody = RequestBody.create(MediaType.parse("application/json;charset=utf-8"), param);
+        sendRequestCurrentThread(requestBean.postJSonToken(url, requestBody, token), cls, callBack);
+    }
+
+    /**
+     * post请求 表单提交
+     *
+     * @param url      url
+     * @param map      Field map
+     * @param cls      返回bean类
+     * @param callBack 网络执行回调
+     */
+    public void post(String url, Map<String, Object> map, Class cls, NetCallBack callBack) {
+        sendRequest(requestBean.postForm(url, map), cls, callBack);
+    }
+    public void post(String url, Map<String, Object> map, Class cls, NetCallBack callBack,boolean toMainThread) {
+        sendRequestCurrentThread(requestBean.postForm(url, map), cls, callBack);
+    }
+
+    /**
+     * post请求 表单提交 带token
+     *
+     * @param url      url
+     * @param map      Field map
+     * @param token    token
+     * @param cls      返回bean类
+     * @param callBack 网络执行回调
+     */
+    public void post(String url, Map<String, Object> map, String token, Class cls, NetCallBack callBack) {
+        sendRequest(requestBean.postMapToken(url, map, token), cls, callBack);
+    }
+    public void post(String url, Map<String, Object> map, String token, Class cls, NetCallBack callBack,boolean toMainThread) {
+        sendRequestCurrentThread(requestBean.postMapToken(url, map, token), cls, callBack);
+    }
+
+    /**
+     * post请求 json + query + token
+     *
+     * @param url      url
+     * @param param    json格式数据
+     * @param map      query map
+     * @param token    token
+     * @param cls      返回bean类
+     * @param callBack 网络执行回调
+     */
+    public void post(String url, String param, Map<String, Object> map, String token, Class cls, NetCallBack callBack) {
+        RequestBody requestBody = RequestBody.create(MediaType.parse("application/json;charset=utf-8"), param);
+        sendRequest(requestBean.postJsonMapToken(url, requestBody, map, token), cls, callBack);
+    }
+
+    public void post(String url, String param, Map<String, Object> map, String token, Class cls, NetCallBack callBack,boolean toMainThread) {
+        RequestBody requestBody = RequestBody.create(MediaType.parse("application/json;charset=utf-8"), param);
+        sendRequestCurrentThread(requestBean.postJsonMapToken(url, requestBody, map, token), cls, callBack);
+    }
+
+    /**
+     * 上传文件单个
+     *
+     * @param url      url
+     * @param file     file
+     * @param token    token
+     * @param cls      返回bean类
+     * @param callBack 网络执行回调
+     */
+    public void upload(String url, File file, String token, Class cls, NetCallBack callBack) {
+        MultipartBody.Part body = FileUtil.getPart("file", file);
+        sendRequest(requestBean.postFileToken(url, body, token), cls, callBack);
+    }
+    public void upload(String url, File file, String token, Class cls, NetCallBack callBack,boolean toMainThread) {
+        MultipartBody.Part body = FileUtil.getPart("file", file);
+        sendRequestCurrentThread(requestBean.postFileToken(url, body, token), cls, callBack);
+    }
+
+    /**
+     * 上传多个文件
+     *
+     * @param url      url
+     * @param files    files
+     * @param token    token
+     * @param cls      返回bean类
+     * @param callBack 网络执行回调
+     */
+    public void uploadFilesAndText(String url, List<File> files, String token, Class cls, NetCallBack callBack) {
+        Map map = FileUtil.filesToMultipartBodyParts(files);
+        sendRequest(requestBean.postFilesText(url, map, token), cls, callBack);
+    }
+
+    public void uploadFilesAndText(String url, List<File> files, String token, Class cls, NetCallBack callBack,boolean toMainThread) {
+        Map map = FileUtil.filesToMultipartBodyParts(files);
+        sendRequestCurrentThread(requestBean.postFilesText(url, map, token), cls, callBack);
+    }
+    /**
+     * get无参
+     *
+     * @param url      url
+     * @param cls      返回bean类
+     * @param callBack 网络执行回调
+     */
+    public void get(String url, Class cls, NetCallBack callBack) {
+        sendRequest(requestBean.get(url), cls, callBack);
+    }
+    public void get(String url, Class cls, NetCallBack callBack,boolean toMainThread) {
+        sendRequestCurrentThread(requestBean.get(url), cls, callBack);
+    }
+
+    /**
+     * get有token
+     *
+     * @param url      url
+     * @param token    token
+     * @param cls      返回bean类
+     * @param callBack 网络执行回调
+     */
+    public void get(String url, String token, Class cls, NetCallBack callBack) {
+        sendRequest(requestBean.getToken(url, token), cls, callBack);
+    }
+    public void get(String url, String token, Class cls, NetCallBack callBack,boolean toMainThread) {
+        sendRequestCurrentThread(requestBean.getToken(url, token), cls, callBack);
+    }
+
+    /**
+     * get 有Query
+     *
+     * @param url      url
+     * @param map      query map
+     * @param cls      返回bean类
+     * @param callBack 网络执行回调
+     */
+    public void get(String url, Map<String, Object> map, Class cls, NetCallBack callBack) {
+        sendRequest(requestBean.getQuery(url, map), cls, callBack);
+    }
+
+    public void get(String url, Map<String, Object> map, Class cls, NetCallBack callBack,boolean toMainThread) {
+        sendRequestCurrentThread(requestBean.getQuery(url, map), cls, callBack);
+    }
+    /**
+     * get 有query 和 token
+     *
+     * @param url      url
+     * @param map      query map
+     * @param token    token
+     * @param cls      返回bean类
+     * @param callBack 网络执行回调
+     */
+    public void get(String url, Map<String, Object> map, String token, Class cls, NetCallBack callBack) {
+        sendRequest(requestBean.getQueryToken(url, map, token), cls, callBack);
+    }
+    public void get(String url, Map<String, Object> map, String token, Class cls, NetCallBack callBack,boolean toMainThread) {
+        sendRequestCurrentThread(requestBean.getQueryToken(url, map, token), cls, callBack);
+    }
+
+    /**
+     * 请求实际发送函数
+     *
+     * @param observable Observable对象
+     * @param cls        返回bean类
+     * @param callBack   网络执行回调
+     */
+    private void sendRequest(Observable observable, final Class cls, final NetCallBack callBack) {
+        observable.subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Observer<ResponseBody>() {
+                    @Override
+                    public void onSubscribe(Disposable d) {
+
+                    }
+
+                    @Override
+                    public void onNext(ResponseBody responseBody) {
+                        try {
+                            callBack.onSuccess(gson.fromJson(responseBody.string(), cls));
+                        } catch (IOException e) {
+                            Log.e("TAG", "onNext: "+e );
+                        }
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        callBack.onError(e.getMessage());
+                    }
+
+                    @Override
+                    public void onComplete() {
+
+                    }
+                });
+    }
+
+    private void sendRequestCurrentThread(Observable observable, final Class cls, final NetCallBack callBack) {
+        observable.subscribe(new Observer<ResponseBody>() {
+                    @Override
+                    public void onSubscribe(Disposable d) {
+
+                    }
+
+                    @Override
+                    public void onNext(ResponseBody responseBody) {
+                        try {
+                            callBack.onSuccess(gson.fromJson(responseBody.string(), cls));
+                        } catch (IOException e) {
+                            callBack.onError(e.getMessage());
+                        }
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        callBack.onError(e.getMessage());
+                    }
+
+                    @Override
+                    public void onComplete() {
+
+                    }
+                });
     }
 
     /**

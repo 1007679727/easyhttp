@@ -2,10 +2,9 @@ package com.example.retrofitdemo;
 
 
 import android.util.Log;
-import com.example.retrofitutil.datainterface.ResponseBean;
 import org.json.JSONObject;
 
-public class Translation extends ResponseBean {
+public class Translation {
 //    private int code;
 //    private String message;
     private String content;
@@ -32,11 +31,5 @@ public class Translation extends ResponseBean {
         Log.e("MainActivity", "Rxjava翻译结果：" + note);
         Log.e("MainActivity", "Rxjava翻译结果：" + love);
         Log.e("MainActivity", "Rxjava翻译结果：" + translation);
-    }
-
-    @Override
-    public JSONObject getValue() {
-        show();
-        return null;
     }
 }
