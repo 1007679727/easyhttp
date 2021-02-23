@@ -57,6 +57,7 @@ public class RetrofitUtil {
                 Log.e("TAG", "accept: "+throwable.toString() );
             }
         });
+        retrofitUtil = this;
     }
 
     /**

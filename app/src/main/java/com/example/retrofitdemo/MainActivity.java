@@ -53,7 +53,18 @@ public class MainActivity extends AppCompatActivity {
                     public void onError(Object o) {
                         Log.e(TAG, "onError: "+o );
                     }
-                });
+                }); //切换为主线程
+                RetrofitUtil.getInstance().get(url, Translation.class, new NetCallBack() { //当前线程
+                    @Override
+                    public void onSuccess(Object o) {
+                        ((Translation)o).show();
+                    }
+
+                    @Override
+                    public void onError(Object o) {
+                        Log.e(TAG, "onError: "+o );
+                    }
+                },true);
             }
         });
     }
