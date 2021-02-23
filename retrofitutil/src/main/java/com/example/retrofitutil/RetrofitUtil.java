@@ -47,7 +47,8 @@ public class RetrofitUtil {
     private Retrofit retrofit;
     private Gson gson;
 
-    public RetrofitUtil() {
+    public RetrofitUtil(String baseUrl) {
+        BASE_URL = baseUrl;
         init();
         RxJavaPlugins.setErrorHandler(new Consumer<Throwable>() {
             @Override
@@ -108,7 +109,7 @@ public class RetrofitUtil {
      */
     public static RetrofitUtil getInstance() {
         if (retrofitUtil == null) {
-            retrofitUtil = new RetrofitUtil();
+            retrofitUtil = new RetrofitUtil("http://127.0.0.1");
         }
         return retrofitUtil;
     }
