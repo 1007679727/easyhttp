@@ -2,6 +2,7 @@ package com.example.retrofitutil;
 
 import android.annotation.SuppressLint;
 import android.util.Log;
+import androidx.annotation.NonNull;
 import com.example.retrofitutil.api.NetCallBack;
 import com.example.retrofitutil.api.RequestBaseInterface;
 import com.example.retrofitutil.uitl.FileUtil;
@@ -377,6 +378,19 @@ public class RetrofitUtil {
 
                     }
                 });
+    }
+
+    public  void cancel(@NonNull Object tag){
+        for (Call call : client.dispatcher().queuedCalls()) {
+            if (tag.equals(call.request().tag())) {
+                call.cancel();
+            }
+        }
+        for (Call call : client.dispatcher().runningCalls()) {
+            if (tag.equals(call.request().tag())) {
+                call.cancel();
+            }
+        }
     }
 
     /**
